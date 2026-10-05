@@ -209,7 +209,7 @@ def run_diagnostics() -> Dict[str, Any]:
         if dW.norm() > 1e-6:
             U, S, Vh = torch.linalg.svd(dW, full_matrices=False)
             esd_top1_vectors[k_name] = Vh[0:1, :].T.to(device)  # (768, 1)
-            svd_energies.append(float((S[0] ** 2) / (S ** 2).sum()))
+            svd_energies.append(float(((S.detach()[0] ** 2) / (S.detach() ** 2).sum()).item()))
 
     # Build contrastive direction helper
     def extract_contrastive_vector(pos_prompts: List[str], neg_prompts: List[str]) -> torch.Tensor:
@@ -301,12 +301,12 @@ def run_diagnostics() -> Dict[str, Any]:
 
     # Caches:
     # 1. Standard stratified cache (uniform bins across [0, 1000))
-    clean_latents = torch.randn(len(concept_eval_prompts), 4, 64, 64, device=device, dtype=torch.float16)
-    cache_standard = NoiseCache.build(base_predictor=base_predictor, latents=clean_latents, timesteps=None, cond=c_cond, seed=42)
+    concept_latents = torch.randn(len(concept_eval_prompts), 4, 64, 64, device=device, dtype=torch.float16)
+    cache_standard = NoiseCache.build(base_predictor=base_predictor, latents=concept_latents, timesteps=None, cond=c_cond, seed=42)
 
     # 2. Windowed cache restricted to semantic synthesis window t in [100, 500]
     t_window = torch.randint(100, 500, (len(concept_eval_prompts),), device="cpu")
-    cache_windowed = NoiseCache.build(base_predictor=base_predictor, latents=clean_latents, timesteps=t_window, cond=c_cond, seed=42)
+    cache_windowed = NoiseCache.build(base_predictor=base_predictor, latents=concept_latents, timesteps=t_window, cond=c_cond, seed=42)
 
     # 3. Guidance Delta cache: compute ref_guidance_delta = base(c) - base(empty)
     with torch.inference_mode():
@@ -331,7 +331,8 @@ def run_diagnostics() -> Dict[str, Any]:
     win_baseline_mse = window_ref_scorer.calibrate(erased_predictor)
 
     # Neutral cache for measuring neutral prediction drift
-    erased_neutral_cache = NoiseCache.build(base_predictor=erased_predictor, latents=clean_latents, timesteps=None, cond=n_cond, seed=1337)
+    neutral_latents = torch.randn(len(neutral_eval_prompts), 4, 64, 64, device=device, dtype=torch.float16)
+    erased_neutral_cache = NoiseCache.build(base_predictor=erased_predictor, latents=neutral_latents, timesteps=None, cond=n_cond, seed=1337)
 
     # Set up Optuna study on erased UNet
     provider = DictSubspaceProvider({
