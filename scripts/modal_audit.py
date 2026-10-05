@@ -155,8 +155,8 @@ def run_real_model_audit(
 
     # 4. Contrastive Concept Subspace & Optuna Search for "parachute"
     print(f"\n[4/4] Running Subspace Extraction & Optuna Search for '{concept_name}'...")
-    concept_entry = split.registry[concept_name]
-    concept_prompts = list(split.search_prompts(concept_name)[:8])
+    concept_entry = split.registry.get(concept_name)
+    concept_prompts = list(concept_entry.search_prompts[:8])
 
     concept_tokens = tokenizer(concept_prompts, padding=True, truncation=True, return_tensors="pt").input_ids.to(device)
     with torch.no_grad():

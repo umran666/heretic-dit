@@ -135,6 +135,9 @@ class ConceptRegistry:
                 return concept
         raise KeyError(f"Unknown concept {name!r}; available: {list(self.names)}")
 
+    def __getitem__(self, name: str) -> ConceptSpec:
+        return self.get(name)
+
     def __contains__(self, name: str) -> bool:
         try:
             self.get(name)
