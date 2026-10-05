@@ -457,12 +457,35 @@ def run_diagnostics() -> Dict[str, Any]:
     print(f"4. Proxy v2 (Guidance Delta epsilon(c)-eps(0)): rho = {rho_delta:+.4f} (p = {p_delta:.4e})")
     print("=" * 70)
 
-    # Specificity Analysis
+    # Specificity Analysis & Objective 2 Check
     all_neutral_styles = [t["real_neutral_style"] for t in trials_data]
+    proxy_drifts = [t.values[1] for t in study.trials]
+    rho_drift_bleed, p_drift_bleed = safe_spearman(proxy_drifts, all_neutral_styles)
+
     print(f"\nSpecificity Check (Van Gogh Style Classifier Score on Neutral Prompts):")
     print(f"  Mean across 30 edited models: {np.mean(all_neutral_styles):.4f} +/- {np.std(all_neutral_styles):.4f}")
     print(f"  Max across 30 edited models:  {np.max(all_neutral_styles):.4f}")
     print(f"  Min across 30 edited models:  {np.min(all_neutral_styles):.4f}")
+    print(f"  Spearman rho(neutral epsilon-drift, neutral style bleed): {rho_drift_bleed:+.4f} (p = {p_drift_bleed:.4e})")
+
+    # Bleed-Penalized Normalized Ground Truth
+    norm_recs = [(t["real_concept_recovery"] - 0.4916) / 0.5076 for t in trials_data]
+    bleed_penalized_recs = [
+        float(max(0.0, r - max(0.0, (n - 0.08))))
+        for r, n in zip(norm_recs, all_neutral_styles)
+    ]
+
+    rho_v1_gated, p_v1_gated = safe_spearman([t["proxy_v1_clipped"] for t in trials_data], bleed_penalized_recs)
+    rho_unclip_gated, p_unclip_gated = safe_spearman([t["proxy_v1_unclipped"] for t in trials_data], bleed_penalized_recs)
+    rho_delta_gated, p_delta_gated = safe_spearman([t["proxy_guidance_delta"] for t in trials_data], bleed_penalized_recs)
+
+    print("\n" + "=" * 70)
+    print("BLEED-PENALIZED GROUND-TRUTH RECOVERY SPEARMAN CORRELATION:")
+    print("=" * 70)
+    print(f"1. Proxy v1 (Raw epsilon, clipped):            rho = {rho_v1_gated:+.4f} (p = {p_v1_gated:.4e})")
+    print(f"2. Proxy v1 (Raw epsilon, unclipped):          rho = {rho_unclip_gated:+.4f} (p = {p_unclip_gated:.4e})")
+    print(f"4. Proxy v2 (Guidance Delta):                  rho = {rho_delta_gated:+.4f} (p = {p_delta_gated:.4e})")
+    print("=" * 70)
 
     # -------------------------------------------------------------------------
     # CHECK 5: Test-Retest Reliability Ceiling
