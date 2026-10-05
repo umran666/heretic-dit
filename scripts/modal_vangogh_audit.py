@@ -71,7 +71,7 @@ def run_vangogh_audit(
     from heretic_dit.core.subspace import mean_difference
     from heretic_dit.eval.adapters import CallableAdapter, DiffusersAdapter
     from heretic_dit.eval.classifiers import ClipStyleScorer
-    from heretic_dit.eval.proxy_validity import ProxyTrial, evaluate_proxy_validity
+    from heretic_dit.eval.proxy_validity import ProxyTrial, evaluate_proxy_validity, spearman
     from heretic_dit.eval.validator import DeterministicGenerativeValidator, ValidatorConfig
     from heretic_dit.interfaces import EditSpec
     from heretic_dit.metrics.drift import NoiseCache, UNetPredictor, compute_epsilon_drift
@@ -239,8 +239,8 @@ def run_vangogh_audit(
         neutral_eval_cond = text_encoder(neutral_eval_tokens)[0]
 
     clean_latents = torch.randn(len(neutral_eval_prompts), 4, 64, 64, device=device, dtype=torch.float16)
-    neutral_cache = NoiseCache.build(
-        base_predictor=base_predictor,
+    erased_neutral_cache = NoiseCache.build(
+        base_predictor=erased_predictor,
         latents=clean_latents,
         timesteps=None,
         cond=neutral_eval_cond,
@@ -249,7 +249,7 @@ def run_vangogh_audit(
     )
 
     # Measure unedited dual-pass hardware noise floor
-    floor_drift = float(compute_epsilon_drift(base_predictor, base_predictor, cache=neutral_cache, autocast_dtype=None))
+    floor_drift = float(compute_epsilon_drift(erased_predictor, erased_predictor, cache=erased_neutral_cache, autocast_dtype=None))
     print(f"GPU Hardware Noise Floor (consecutive forward passes, no edits): {floor_drift:.10f}")
 
     # Test bit-exact restore on erased_adapter
@@ -259,7 +259,7 @@ def run_vangogh_audit(
     active_spec = EditSpec(layers=cross_k_layers[:2], alpha=0.5, mode="orthogonal", side="input", subspace=test_direction)
 
     with erased_adapter.temporary_edit(identity_spec):
-        id_drift = float(compute_epsilon_drift(erased_predictor, erased_predictor, cache=neutral_cache, autocast_dtype=None))
+        id_drift = float(compute_epsilon_drift(erased_predictor, erased_predictor, cache=erased_neutral_cache, autocast_dtype=None))
     assert torch.equal(erased_adapter.target_layers[cross_k_layers[0]].module.weight, orig_k0), "alpha=0.0 restore failed!"
 
     with erased_adapter.temporary_edit(active_spec):
@@ -390,7 +390,7 @@ def run_vangogh_audit(
         predictor=erased_predictor,
         subspace_provider=provider,
         concept_scorer=ref_scorer,
-        neutral_cache=neutral_cache,
+        neutral_cache=erased_neutral_cache,
         targets=targets,
         config=search_config,
         autocast_dtype=None,
@@ -415,7 +415,7 @@ def run_vangogh_audit(
         classifier=style_scorer,
         concept_prompts={"van gogh": heldout_prompts},
         neutral_prompts=neutral_eval_prompts,
-        config=ValidatorConfig(num_inference_steps=8, guidance_scale=3.0, batch_size=4),
+        config=ValidatorConfig(num_inference_steps=8, guidance_scale=3.0, batch_size=4, neutral_samples=4),
     )
 
     # Stratified selection across recovery spectrum: Pareto + middle + low
@@ -461,21 +461,32 @@ def run_vangogh_audit(
     val_duration = time.perf_counter() - t_val_start
     print(f"\nGenerative validation completed in {val_duration:.1f} s ({val_duration / len(selected_trials):.2f} s/trial).")
 
+    proxy_recs = [t.proxy_recovery for t in proxy_trials]
+    real_recs = [t.real_recovery for t in proxy_trials]
+    rec_rho, rec_p = spearman(proxy_recs, real_recs)
+
+    print("\n" + "=" * 60)
+    print("PROXY VALIDITY REPORT (SPEARMAN RANK CORRELATION)")
+    print("=" * 60)
+    print(f"Evaluated Trials (N):    {len(proxy_trials)}")
+    print(f"Recovery Spearman rho:   {rec_rho:.4f} (p-value = {rec_p:.4e})")
+    print(f"Proxy Trustworthy (rho >= 0.70): {'YES [PASS]' if rec_rho >= 0.70 else 'BORDERLINE/NO'}")
+
     try:
         validity_report = evaluate_proxy_validity(proxy_trials)
-        print("\n" + "=" * 60)
-        print("PROXY VALIDITY REPORT (SPEARMAN RANK CORRELATION)")
-        print("=" * 60)
-        print(f"Evaluated Trials (N):    {validity_report.n_trials}")
-        print(f"Recovery Spearman rho:   {validity_report.recovery_rho:.4f} (p-value = {validity_report.recovery_pvalue:.4e})")
         print(f"Quality Drift rho:       {validity_report.quality_rho:.4f} (p-value = {validity_report.quality_pvalue:.4e})")
         print(f"Combined Utility rho:    {validity_report.utility_rho:.4f} (p-value = {validity_report.utility_pvalue:.4e})")
-        print(f"Proxy Trustworthy (rho >= 0.70): {'YES [PASS]' if validity_report.trustworthy else 'BORDERLINE/NO'}")
-        print("=" * 60)
         validity_dict = validity_report.to_dict()
     except ValueError as err:
-        print(f"\nNotice during Spearman correlation evaluation: {err}")
-        validity_dict = {"error": str(err), "n_trials": len(proxy_trials)}
+        print(f"Notice on quality drift/utility calculation: {err}")
+        validity_dict = {
+            "n_trials": len(proxy_trials),
+            "recovery_rho": rec_rho,
+            "recovery_pvalue": rec_p,
+            "trustworthy": bool(rec_rho >= 0.70),
+            "note": str(err),
+        }
+    print("=" * 60)
 
     return {
         "base_model": base_model_id,
