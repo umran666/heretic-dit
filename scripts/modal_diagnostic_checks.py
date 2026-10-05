@@ -285,9 +285,12 @@ def run_diagnostics() -> Dict[str, Any]:
     erased_predictor = UNetPredictor(model=erased_unet, prediction_type="epsilon")
 
     concept_entry = split.registry.get("van gogh")
-    concept_eval_prompts = list(concept_entry.search_prompts[:16])
+    concept_eval_prompts = list(concept_entry.search_prompts[:4])
     heldout_prompts = list(concept_entry.heldout_prompts[:4])
-    neutral_eval_prompts = list(split.registry.neutral_prompts[:16])
+    neutral_eval_prompts = list(split.registry.neutral_prompts[:4])
+
+    del esd_state_dict
+    torch.cuda.empty_cache()
 
     # Tokenize prompts
     c_tokens = tokenizer(concept_eval_prompts, padding=True, truncation=True, return_tensors="pt").input_ids.to(device)
@@ -312,11 +315,14 @@ def run_diagnostics() -> Dict[str, Any]:
     with torch.inference_mode():
         ref_c_pred = cache_standard.base_pred
         ref_uncond_pred = base_predictor.predict_noise(cache_standard.x_t, cache_standard.t, uncond_cond)
-        ref_guidance_delta = ref_c_pred - ref_uncond_pred
+        ref_guidance_delta = (ref_c_pred - ref_uncond_pred).detach()
 
         erased_c_pred = erased_predictor.predict_noise(cache_standard.x_t, cache_standard.t, c_cond)
         erased_uncond_pred = erased_predictor.predict_noise(cache_standard.x_t, cache_standard.t, uncond_cond)
-        erased_guidance_delta = erased_c_pred - erased_uncond_pred
+        erased_guidance_delta = (erased_c_pred - erased_uncond_pred).detach()
+
+    del ref_c_pred, ref_uncond_pred, erased_c_pred, erased_uncond_pred
+    torch.cuda.empty_cache()
 
     # Guidance delta baseline MSE
     guidance_baseline_mse = float((erased_guidance_delta - ref_guidance_delta).pow(2).mean())
@@ -333,6 +339,7 @@ def run_diagnostics() -> Dict[str, Any]:
     # Neutral cache for measuring neutral prediction drift
     neutral_latents = torch.randn(len(neutral_eval_prompts), 4, 64, 64, device=device, dtype=torch.float16)
     erased_neutral_cache = NoiseCache.build(base_predictor=erased_predictor, latents=neutral_latents, timesteps=None, cond=n_cond, seed=1337)
+    torch.cuda.empty_cache()
 
     # Set up Optuna study on erased UNet
     provider = DictSubspaceProvider({
