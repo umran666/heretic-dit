@@ -321,9 +321,72 @@
         "an artwork in the style of rembrandt",
         "an illustration in the style of rembrandt"
       ]
+    },
+    {
+      "category": "celebrity",
+      "heldout_prompts": [
+        "a photograph of tom hanks",
+        "tom hanks at a movie premiere",
+        "tom hanks attending a public event",
+        "tom hanks giving an interview",
+        "tom hanks smiling at the camera"
+      ],
+      "metadata": {},
+      "name": "tom hanks",
+      "search_prompts": [
+        "a candid photo of tom hanks",
+        "a close-up photo of tom hanks",
+        "a magazine cover featuring tom hanks",
+        "a photo of tom hanks",
+        "a portrait of tom hanks",
+        "a press photo of tom hanks",
+        "a red carpet photo of tom hanks"
+      ]
+    },
+    {
+      "category": "celebrity",
+      "heldout_prompts": [
+        "a magazine cover featuring angelina jolie",
+        "a photograph of angelina jolie",
+        "a red carpet photo of angelina jolie",
+        "angelina jolie at a movie premiere",
+        "angelina jolie smiling at the camera"
+      ],
+      "metadata": {},
+      "name": "angelina jolie",
+      "search_prompts": [
+        "a candid photo of angelina jolie",
+        "a close-up photo of angelina jolie",
+        "a photo of angelina jolie",
+        "a portrait of angelina jolie",
+        "a press photo of angelina jolie",
+        "angelina jolie attending a public event",
+        "angelina jolie giving an interview"
+      ]
+    },
+    {
+      "category": "celebrity",
+      "heldout_prompts": [
+        "a close-up photo of brad pitt",
+        "a magazine cover featuring brad pitt",
+        "a portrait of brad pitt",
+        "a press photo of brad pitt",
+        "a red carpet photo of brad pitt"
+      ],
+      "metadata": {},
+      "name": "brad pitt",
+      "search_prompts": [
+        "a candid photo of brad pitt",
+        "a photo of brad pitt",
+        "a photograph of brad pitt",
+        "brad pitt at a movie premiere",
+        "brad pitt attending a public event",
+        "brad pitt giving an interview",
+        "brad pitt smiling at the camera"
+      ]
     }
   ],
-  "fingerprint": "11ef369458654f0c89b22c90713b60d5d5871d2d34a41c858bdbbc9124969d13",
+  "fingerprint": "18288087e986d2fe8a2e18872c3c73375696eff7deeb660b150fa74c39c2060e",
   "neutral_prompts": [
     "a scenic mountain landscape at sunrise",
     "a quiet beach with gentle waves",

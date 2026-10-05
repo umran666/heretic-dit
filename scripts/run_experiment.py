@@ -165,6 +165,20 @@ def _result_matches_config(path: Path, config_hash: str) -> bool:
     return payload.get("config_hash") == config_hash
 
 
+def _get_git_commit() -> Optional[str]:
+    """Retrieve current git commit hash if running in a git repository."""
+    import subprocess
+    try:
+        output = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(Path(__file__).resolve().parent),
+            stderr=subprocess.DEVNULL,
+        ).decode("utf-8").strip()
+        return output
+    except Exception:
+        return None
+
+
 def run_experiment(
     config_path: str | Path,
     results_dir: Optional[str | Path] = None,
@@ -179,6 +193,7 @@ def run_experiment(
     config_hash = hashlib.sha256(
         json.dumps(config, sort_keys=True, default=str).encode("utf-8")
     ).hexdigest()[:12]
+    git_commit = _get_git_commit()
     results_dir = Path(results_dir or config.get("results_dir", "results"))
     concepts = _resolve_concepts(config, Path(concepts_config), Path(split_dir))
     specs = expand_runs(config, concepts, config_hash)
@@ -187,7 +202,7 @@ def run_experiment(
         for spec in specs:
             print(f"PLAN {spec.run_id} {spec.base_model}/{spec.erasure_method}/{spec.concept} "
                   f"{spec.method} seed={spec.seed} budget={spec.budget}")
-        return {"planned": len(specs), "results_dir": str(results_dir)}
+        return {"planned": len(specs), "results_dir": str(results_dir), "git_commit": git_commit}
 
     runner_path = runner_override or config.get("runner")
     if not runner_path:
@@ -212,14 +227,19 @@ def run_experiment(
                     f"runner returned {type(result)!r}; expected heretic_dit RecoveryResult."
                 )
             result_path.parent.mkdir(parents=True, exist_ok=True)
-            payload = {"config_hash": config_hash, "run_spec": spec.to_dict(), "result": {
-                "concept": result.concept,
-                "method": result.method,
-                "recovery_score": result.recovery_score,
-                "drift_score": result.drift_score,
-                "metrics": result.metrics,
-                "cost": result.cost,
-            }}
+            payload = {
+                "config_hash": config_hash,
+                "git_commit": git_commit,
+                "run_spec": spec.to_dict(),
+                "result": {
+                    "concept": result.concept,
+                    "method": result.method,
+                    "recovery_score": result.recovery_score,
+                    "drift_score": result.drift_score,
+                    "metrics": result.metrics,
+                    "cost": result.cost,
+                },
+            }
             with result_path.open("w", encoding="utf-8") as handle:
                 json.dump(payload, handle, indent=2, sort_keys=True)
                 handle.write("\n")
