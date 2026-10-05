@@ -342,6 +342,7 @@ class NoiseCache:
     prediction_type: PredictionType = "epsilon"
     uncond_cond: Any = None
     base_uncond_pred: Optional[Tensor] = None
+    autocast_dtype: Optional[torch.dtype] = None
 
     def __len__(self) -> int:
         return int(self.x_t.shape[0])
@@ -409,6 +410,7 @@ class NoiseCache:
             prediction_type=getattr(base_predictor, "prediction_type", "epsilon"),
             uncond_cond=uncond_cond,
             base_uncond_pred=base_uncond_pred,
+            autocast_dtype=autocast_dtype,
         )
 
 
@@ -433,6 +435,9 @@ def _forward(
         return predictor.predict_noise(x_t, t, cond)
 
 
+_DEFAULT_AUTOCAST = object()
+
+
 def compute_epsilon_drift(
     base_model: Optional[NoisePredictor],
     edited_model: NoisePredictor,
@@ -447,7 +452,7 @@ def compute_epsilon_drift(
     uncond_conditioning: Any = None,
     uncond_model: Optional[NoisePredictor] = None,
     prediction_type: Optional[PredictionType] = None,
-    autocast_dtype: Optional[torch.dtype] = torch.bfloat16,
+    autocast_dtype: Any = _DEFAULT_AUTOCAST,
 ) -> Union[float, Dict[str, Any]]:
     """Mean squared prediction drift between the base and edited models.
 
@@ -493,7 +498,11 @@ def compute_epsilon_drift(
         if prediction_type is None:
             prediction_type = cache.prediction_type
         base_uncond_pred = cache.base_uncond_pred
+        if autocast_dtype is _DEFAULT_AUTOCAST:
+            autocast_dtype = cache.autocast_dtype
     else:
+        if autocast_dtype is _DEFAULT_AUTOCAST:
+            autocast_dtype = torch.bfloat16
         if base_model is None:
             raise ValueError("base_model is required when no cache is supplied.")
         if not isinstance(latents_t, Tensor) or timesteps is None:

@@ -58,6 +58,7 @@ def run_real_model_audit(
     from heretic_dit.core.subspace import mean_difference
     from heretic_dit.interfaces import EditSpec
     from heretic_dit.metrics.drift import NoiseCache, UNetPredictor, compute_epsilon_drift
+    from heretic_dit.search.editing import ProjectionTarget
     from heretic_dit.search.optuna_objective import (
         DictSubspaceProvider,
         DenoisingLossScorer,
@@ -123,7 +124,7 @@ def run_real_model_audit(
     )
 
     with adapter.temporary_edit(identity_spec):
-        identity_drift = float(compute_epsilon_drift(predictor, predictor, cache=cache))
+        identity_drift = float(compute_epsilon_drift(predictor, predictor, cache=cache, autocast_dtype=None))
 
     print(f"Identity drift (alpha=0.0): {identity_drift:.8f}")
     assert identity_drift < 1e-6, f"Identity sanity failed! Drift was {identity_drift}"
@@ -143,7 +144,7 @@ def run_real_model_audit(
     for _ in range(5):
         t0 = time.perf_counter()
         with adapter.temporary_edit(test_spec):
-            _ = compute_epsilon_drift(predictor, predictor, cache=cache)
+            _ = compute_epsilon_drift(predictor, predictor, cache=cache, autocast_dtype=None)
         latencies.append(time.perf_counter() - t0)
 
     avg_latency = sum(latencies) / len(latencies)
@@ -170,37 +171,45 @@ def run_real_model_audit(
         layer: v_concept for layer in cross_k_layers + cross_v_layers
     })
 
-    # Concept noise cache for recovery scoring
+    # Concept noise cache / synthetic latents for recovery scoring
     concept_latents = torch.randn(len(concept_prompts), 4, 64, 64, device=device, dtype=torch.float16)
-    concept_cache = NoiseCache.build(
-        base_predictor=predictor,
-        latents=concept_latents,
-        timesteps=None,
+    concept_timesteps = torch.randint(0, 1000, (len(concept_prompts),), device=device)
+    scorer = DenoisingLossScorer(
+        clean_latents=concept_latents,
+        timesteps=concept_timesteps,
         cond=concept_cond,
-        seed=42,
+        prediction_type="epsilon",
         autocast_dtype=None,
     )
-    scorer = DenoisingLossScorer(concept_cache=concept_cache)
+    scorer.calibrate(predictor)
 
     config = TrialConfig(
-        concept=concept_name,
-        layers=tuple(cross_k_layers[:16]),
-        max_alpha=1.0,
-        n_trials=n_trials,
-        seed=42,
+        projection_modes=("orthogonal",),
+        target_projection="both",
+        sampler="nsgaii",
+        side="input",
     )
 
-    study = create_study(study_name=f"audit-{concept_name}", seed=config.seed)
+    targets = [
+        ProjectionTarget(name=name, weight=adapter.target_layers[name].module.weight, device=device)
+        for name in cross_k_layers + cross_v_layers
+    ]
+
+    study = create_study(config=config, study_name=f"audit-{concept_name}")
     objective = build_objective(
-        base_predictor=predictor,
-        neutral_cache=cache,
+        model=unet,
+        predictor=predictor,
         subspace_provider=subspace_provider,
         concept_scorer=scorer,
+        neutral_cache=cache,
+        targets=targets,
         config=config,
+        autocast_dtype=None,
+        compute_dtype=torch.float32,
     )
 
     t_search_start = time.perf_counter()
-    study.optimize(objective, n_trials=config.n_trials)
+    study.optimize(objective, n_trials=n_trials)
     search_duration = time.perf_counter() - t_search_start
 
     pareto_trials = [t for t in study.best_trials]
