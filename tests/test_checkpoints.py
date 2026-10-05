@@ -72,17 +72,17 @@ def test_verify_detects_missing_and_substituted_files(tmp_path):
 
 
 def test_prepare_artifact_local_file_never_substitutes(tmp_path, monkeypatch):
-    """The HF fetch path, fed a local file, locks the hash and refuses mismatch."""
+    """The fetch path, fed a local file, locks the hash and refuses mismatch."""
     calls = {}
 
-    def fake_download(repo, filename, revision, dest):
-        calls["filename"] = filename
+    def fake_download_url(url, dest):
+        calls["url"] = url
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(b"official-esd-weights")
-        return "main"
+        return url
 
     monkeypatch.setattr(
-        "scripts.prepare_erased_checkpoints._download_hf_file", fake_download
+        "scripts.prepare_erased_checkpoints._download_url_file", fake_download_url
     )
     entry = prepare_artifact(
         "esd/sd15/van-gogh",
@@ -90,14 +90,14 @@ def test_prepare_artifact_local_file_never_substitutes(tmp_path, monkeypatch):
         lockfile=tmp_path / "checkpoints.lock.yaml",
     )
     assert entry.origin == "released"
-    assert entry.revision == "main"
-    assert list(entry.files) == [f"esd_sd15_van-gogh/{ARTIFACTS['esd/sd15/van-gogh']['hf_file']}"]
+    filename = Path(ARTIFACTS["esd/sd15/van-gogh"]["url"].split("/")[-1]).name
+    assert list(entry.files) == [f"esd_sd15_van-gogh/{filename}"]
     # Lockfile now contains the entry and verifies cleanly.
     entries = load_lockfile(tmp_path / "checkpoints.lock.yaml")
     assert any(e.run_key == "esd/sd15/van gogh" for e in entries)
     verify_checkpoint(entries[0], tmp_path / "checkpoints")
     # Corrupting the file must break verification (no silent substitution).
-    (tmp_path / "checkpoints" / "esd_sd15_van-gogh" / ARTIFACTS["esd/sd15/van-gogh"]["hf_file"]).write_bytes(b"tampered")
+    (tmp_path / "checkpoints" / "esd_sd15_van-gogh" / filename).write_bytes(b"tampered")
     with pytest.raises(ValueError, match="Hash mismatch"):
         verify_checkpoint(entries[0], tmp_path / "checkpoints")
 

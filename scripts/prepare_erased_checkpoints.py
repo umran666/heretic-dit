@@ -67,12 +67,9 @@ ARTIFACTS: Dict[str, Dict[str, Any]] = {
         "method": "esd",
         "base_model": "sd15",
         "concept": "van gogh",
-        "release_status": "hf",
-        "hf_repo": "rohitgandikota/erasing-models",
-        "hf_file": "van_gogh.pt",
-        "notes": "ESD released style-erasure checkpoint; exact filename may "
-        "differ per release -- the script lists repo files when the pinned "
-        "name is absent and never guesses.",
+        "release_status": "url",
+        "url": "https://erasing.baulab.info/weights/esd_models/art/diffusers-VanGogh-ESDx1-UNET.pt",
+        "notes": "Official ICCV 2023 released ESD style-erasure checkpoint for Van Gogh on SD1.4/1.5.",
     },
     "esd/sd15/grumpy-cat": {
         "method": "esd",
@@ -143,6 +140,12 @@ def _download_github_release(repo_url: str, asset: str, dest: Path) -> str:
     dest.parent.mkdir(parents=True, exist_ok=True)
     with urlopen(url, timeout=120) as response:  # noqa: S310 - pinned public URL
         dest.write_bytes(response.read())
+    return url
+
+
+def _download_url_file(url: str, dest: Path) -> str:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    urlretrieve(url, dest)
     return url
 
 
@@ -231,6 +234,12 @@ def prepare_artifact(
         entry.files[f"{dest_dir.name}/{Path(artifact['github_file']).name}"] = hash_file(
             dest_dir / Path(artifact["github_file"]).name
         )
+    elif status == "url":
+        entry.source = artifact["url"]
+        url_file = Path(artifact["url"].split("/")[-1])
+        dest_file = dest_dir / url_file
+        _download_url_file(artifact["url"], dest_file)
+        entry.files[f"{dest_dir.name}/{url_file.name}"] = hash_file(dest_file)
     elif status == "needs_training" and not train:
         raise RuntimeError(
             f"{artifact_key} has no verified public release. Re-run with --train to "

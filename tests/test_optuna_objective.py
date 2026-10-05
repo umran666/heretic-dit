@@ -338,6 +338,37 @@ def test_mask_layer_mode_runs():
     assert len(study.trials[0].user_attrs["alphas"]) == len(cross_attention_targets(model))
 
 
+def test_block_indexing_preserves_depth_semantics():
+    model, predictor = _model_and_predictor(seed=33, depth=3)
+    neutral = _neutral_cache(predictor, seed=33)
+    objective = build_objective(
+        model, predictor, _identity_provider(model), AlphaScorer(), neutral,
+        autocast_dtype=NO_AUTOCAST,
+    )
+    study = create_study()
+    study.optimize(objective, n_trials=5, n_jobs=1)
+    for trial in study.trials:
+        # ToyUNet depth=3 has 3 cross-attention blocks (blocks.0, blocks.1, blocks.2)
+        assert trial.user_attrs["num_blocks"] == 3
+        start, end = trial.user_attrs["block_range"]
+        assert 0 <= start <= end <= 3
+        # Check that targets within selected blocks have matching alpha
+        alphas = trial.user_attrs["alphas"]
+        target_proj = trial.user_attrs["target_projection"]
+        for b in range(3):
+            k_alpha = alphas.get(f"blocks.{b}.to_k", 0.0)
+            v_alpha = alphas.get(f"blocks.{b}.to_v", 0.0)
+            if not (start <= b < end):
+                assert k_alpha == 0.0 and v_alpha == 0.0
+            else:
+                if target_proj == "both":
+                    assert k_alpha == v_alpha
+                elif target_proj == "to_k":
+                    assert v_alpha == 0.0
+                elif target_proj == "to_v":
+                    assert k_alpha == 0.0
+
+
 def test_weights_restored_after_study():
     model, predictor = _model_and_predictor(seed=37)
     neutral = _neutral_cache(predictor, seed=37)

@@ -602,7 +602,16 @@ def build_objective(
     editable = list(targets) if targets is not None else cross_attention_targets(model)
     if not editable:
         raise ValueError("No editable cross-attention targets were found.")
-    num_layers = len(editable)
+    
+    # Identify unique cross-attention blocks (depth order preserved)
+    unique_blocks: List[str] = list(
+        dict.fromkeys(
+            target.name.rsplit(".", 1)[0] if "." in target.name else target.name
+            for target in editable
+        )
+    )
+    num_blocks = len(unique_blocks)
+    block_to_idx = {name: i for i, name in enumerate(unique_blocks)}
     lock = threading.Lock()
 
     # Resolve subspaces once; no provider calls inside the trial loop.
@@ -630,9 +639,9 @@ def build_objective(
         raise ValueError(f"No targets matched target_projection={config.target_projection!r}.")
 
     def objective(trial: optuna.Trial) -> Tuple[float, float]:
-        kernel, mask, start, end = _suggest_alpha(trial, config, num_layers)
-        alphas = resolve_alphas(
-            num_layers, kernel, layer_mode=config.layer_mode, mask=mask, start=start, end=end
+        kernel, mask, start, end = _suggest_alpha(trial, config, num_blocks)
+        block_alphas = resolve_alphas(
+            num_blocks, kernel, layer_mode=config.layer_mode, mask=mask, start=start, end=end
         )
         mode = trial.suggest_categorical("projection_mode", list(modes))
         lambda_reg = (
@@ -646,12 +655,20 @@ def build_objective(
         tokens = ["to_k", "to_v"] if target_projection == "both" else [target_projection]
 
         edits: List[LayerEdit] = []
-        for index, target in enumerate(editable):
-            alpha = float(alphas[index])
-            if alpha == 0.0:
-                continue
+        resolved_alphas: Dict[str, float] = {}
+        for target in editable:
+            block_name = target.name.rsplit(".", 1)[0] if "." in target.name else target.name
+            b_idx = block_to_idx[block_name]
+            block_alpha = float(block_alphas[b_idx])
             token = "to_k" if ("to_k" in target.name or target.name.rsplit(".", 1)[-1] == "to_k") else "to_v"
-            if token not in tokens:
+
+            if token in tokens:
+                alpha = block_alpha
+            else:
+                alpha = 0.0
+            resolved_alphas[target.name] = alpha
+
+            if alpha == 0.0:
                 continue
             entry = entries[target.name]
             edits.append(
@@ -686,13 +703,13 @@ def build_objective(
         else:
             drift = float(breakdown)
 
-        resolved_alphas = {
-            target.name: float(alphas[index]) for index, target in enumerate(editable)
-        }
         trial.set_user_attr("recovery", recovery)
         trial.set_user_attr("drift", drift)
         trial.set_user_attr("raw_mse", drift)
         trial.set_user_attr("alphas", resolved_alphas)
+        trial.set_user_attr("block_range", (start, end) if start is not None else None)
+        trial.set_user_attr("num_blocks", num_blocks)
+        trial.set_user_attr("selected_blocks", [b for b, a in zip(unique_blocks, block_alphas) if a > 0])
         trial.set_user_attr("selected_layers", [edit.name for edit in edits])
         trial.set_user_attr("projection_mode", mode)
         trial.set_user_attr("lambda_reg", lambda_reg)
