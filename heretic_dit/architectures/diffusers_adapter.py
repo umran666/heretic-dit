@@ -143,7 +143,9 @@ class DiffusersModelAdapter(NoisePredictor):
 
             # Apply projection update with alpha scaling
             # W* = (1 - alpha) * W + alpha * Project(W)
-            if spec.alpha == 1.0:
+            if spec.alpha == 0.0:
+                continue
+            elif spec.alpha == 1.0:
                 project_weights_(
                     weight,
                     subspace,

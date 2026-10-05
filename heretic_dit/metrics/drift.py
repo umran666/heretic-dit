@@ -553,9 +553,10 @@ def compute_epsilon_drift(
             squared_error += float(error.sum())
             squared_base += float(reference.float().pow(2).sum())
             elements += reference.numel()
-            per_sample = error.reshape(stop - start, -1).sum(dim=1).to(torch.float64)
-            bin_squared.index_add_(0, bins[start:stop].to(torch.long), per_sample)
-            bin_count.index_add_(0, bins[start:stop].to(torch.long), ones[start:stop])
+            per_sample = error.reshape(stop - start, -1).sum(dim=1).to(device="cpu", dtype=torch.float64)
+            bin_idx = bins[start:stop].to(device="cpu", dtype=torch.long)
+            bin_squared.index_add_(0, bin_idx, per_sample)
+            bin_count.index_add_(0, bin_idx, ones[start:stop])
 
     denominator = max(elements, 1)
     drift = squared_error / denominator

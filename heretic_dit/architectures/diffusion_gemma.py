@@ -147,7 +147,9 @@ class DiffusionGemmaAdapter:
             processed_data_ptrs.add(info.data_ptr)
 
             # Apply projection (supports both 2D Linear and 3D batched MoE tensors)
-            if spec.alpha == 1.0:
+            if spec.alpha == 0.0:
+                continue
+            elif spec.alpha == 1.0:
                 project_weights_(
                     param,
                     spec.subspace,
