@@ -1,0 +1,370 @@
+{
+  "concepts": [
+    {
+      "category": "object",
+      "heldout_prompts": [
+        "a dark photo of a tench",
+        "a high-resolution photo of a tench",
+        "a photograph of a tench",
+        "a tench in a natural setting",
+        "several tenchs grouped together"
+      ],
+      "metadata": {
+        "wnid": "n01440764"
+      },
+      "name": "tench",
+      "search_prompts": [
+        "a blurry photo of a tench",
+        "a bright photo of a tench",
+        "a close-up photo of a tench",
+        "a painting of a tench",
+        "a photo of a tench",
+        "a tench on a table",
+        "a toy replica of a tench"
+      ]
+    },
+    {
+      "category": "object",
+      "heldout_prompts": [
+        "a blurry photo of a english springer",
+        "a dark photo of a english springer",
+        "a high-resolution photo of a english springer",
+        "a toy replica of a english springer",
+        "several english springers grouped together"
+      ],
+      "metadata": {
+        "wnid": "n02102040"
+      },
+      "name": "english springer",
+      "search_prompts": [
+        "a bright photo of a english springer",
+        "a close-up photo of a english springer",
+        "a english springer in a natural setting",
+        "a english springer on a table",
+        "a painting of a english springer",
+        "a photo of a english springer",
+        "a photograph of a english springer"
+      ]
+    },
+    {
+      "category": "object",
+      "heldout_prompts": [
+        "a blurry photo of a cassette player",
+        "a cassette player in a natural setting",
+        "a close-up photo of a cassette player",
+        "a toy replica of a cassette player",
+        "several cassette players grouped together"
+      ],
+      "metadata": {
+        "wnid": "n02950826"
+      },
+      "name": "cassette player",
+      "search_prompts": [
+        "a bright photo of a cassette player",
+        "a cassette player on a table",
+        "a dark photo of a cassette player",
+        "a high-resolution photo of a cassette player",
+        "a painting of a cassette player",
+        "a photo of a cassette player",
+        "a photograph of a cassette player"
+      ]
+    },
+    {
+      "category": "object",
+      "heldout_prompts": [
+        "a blurry photo of a chain saw",
+        "a chain saw on a table",
+        "a photo of a chain saw",
+        "a photograph of a chain saw",
+        "several chain saws grouped together"
+      ],
+      "metadata": {
+        "wnid": "n02974003"
+      },
+      "name": "chain saw",
+      "search_prompts": [
+        "a bright photo of a chain saw",
+        "a chain saw in a natural setting",
+        "a close-up photo of a chain saw",
+        "a dark photo of a chain saw",
+        "a high-resolution photo of a chain saw",
+        "a painting of a chain saw",
+        "a toy replica of a chain saw"
+      ]
+    },
+    {
+      "category": "object",
+      "heldout_prompts": [
+        "a high-resolution photo of a church",
+        "a painting of a church",
+        "a photograph of a church",
+        "a toy replica of a church",
+        "several churchs grouped together"
+      ],
+      "metadata": {
+        "wnid": "n03000684"
+      },
+      "name": "church",
+      "search_prompts": [
+        "a blurry photo of a church",
+        "a bright photo of a church",
+        "a church in a natural setting",
+        "a church on a table",
+        "a close-up photo of a church",
+        "a dark photo of a church",
+        "a photo of a church"
+      ]
+    },
+    {
+      "category": "object",
+      "heldout_prompts": [
+        "a blurry photo of a french horn",
+        "a dark photo of a french horn",
+        "a high-resolution photo of a french horn",
+        "a photo of a french horn",
+        "a toy replica of a french horn"
+      ],
+      "metadata": {
+        "wnid": "n03075370"
+      },
+      "name": "french horn",
+      "search_prompts": [
+        "a bright photo of a french horn",
+        "a close-up photo of a french horn",
+        "a french horn in a natural setting",
+        "a french horn on a table",
+        "a painting of a french horn",
+        "a photograph of a french horn",
+        "several french horns grouped together"
+      ]
+    },
+    {
+      "category": "object",
+      "heldout_prompts": [
+        "a blurry photo of a garbage truck",
+        "a bright photo of a garbage truck",
+        "a dark photo of a garbage truck",
+        "a garbage truck in a natural setting",
+        "a painting of a garbage truck"
+      ],
+      "metadata": {
+        "wnid": "n03417042"
+      },
+      "name": "garbage truck",
+      "search_prompts": [
+        "a close-up photo of a garbage truck",
+        "a garbage truck on a table",
+        "a high-resolution photo of a garbage truck",
+        "a photo of a garbage truck",
+        "a photograph of a garbage truck",
+        "a toy replica of a garbage truck",
+        "several garbage trucks grouped together"
+      ]
+    },
+    {
+      "category": "object",
+      "heldout_prompts": [
+        "a bright photo of a gas pump",
+        "a gas pump in a natural setting",
+        "a gas pump on a table",
+        "a high-resolution photo of a gas pump",
+        "a painting of a gas pump"
+      ],
+      "metadata": {
+        "wnid": "n03425413"
+      },
+      "name": "gas pump",
+      "search_prompts": [
+        "a blurry photo of a gas pump",
+        "a close-up photo of a gas pump",
+        "a dark photo of a gas pump",
+        "a photo of a gas pump",
+        "a photograph of a gas pump",
+        "a toy replica of a gas pump",
+        "several gas pumps grouped together"
+      ]
+    },
+    {
+      "category": "object",
+      "heldout_prompts": [
+        "a bright photo of a golf ball",
+        "a high-resolution photo of a golf ball",
+        "a painting of a golf ball",
+        "a photo of a golf ball",
+        "a photograph of a golf ball"
+      ],
+      "metadata": {
+        "wnid": "n03445777"
+      },
+      "name": "golf ball",
+      "search_prompts": [
+        "a blurry photo of a golf ball",
+        "a close-up photo of a golf ball",
+        "a dark photo of a golf ball",
+        "a golf ball in a natural setting",
+        "a golf ball on a table",
+        "a toy replica of a golf ball",
+        "several golf balls grouped together"
+      ]
+    },
+    {
+      "category": "object",
+      "heldout_prompts": [
+        "a blurry photo of a parachute",
+        "a bright photo of a parachute",
+        "a high-resolution photo of a parachute",
+        "a parachute on a table",
+        "a photo of a parachute"
+      ],
+      "metadata": {
+        "wnid": "n03888257"
+      },
+      "name": "parachute",
+      "search_prompts": [
+        "a close-up photo of a parachute",
+        "a dark photo of a parachute",
+        "a painting of a parachute",
+        "a parachute in a natural setting",
+        "a photograph of a parachute",
+        "a toy replica of a parachute",
+        "several parachutes grouped together"
+      ]
+    },
+    {
+      "category": "style",
+      "heldout_prompts": [
+        "a portrait painted in the style of van gogh",
+        "a poster in the style of van gogh",
+        "a starry scene painted in the style of van gogh",
+        "an illustration in the style of van gogh",
+        "an oil painting in the style of van gogh"
+      ],
+      "metadata": {
+        "medium": "painting"
+      },
+      "name": "van gogh",
+      "search_prompts": [
+        "a mural in the style of van gogh",
+        "a painting in the style of van gogh",
+        "a sketch in the style of van gogh",
+        "a van gogh style painting of a landscape",
+        "a van gogh style painting of a village at night",
+        "a van gogh style painting of flowers",
+        "an artwork in the style of van gogh"
+      ]
+    },
+    {
+      "category": "style",
+      "heldout_prompts": [
+        "a mural in the style of monet",
+        "a painting in the style of monet",
+        "a poster in the style of monet",
+        "a sketch in the style of monet",
+        "an oil painting in the style of monet"
+      ],
+      "metadata": {
+        "medium": "painting"
+      },
+      "name": "monet",
+      "search_prompts": [
+        "a monet style painting of a landscape",
+        "a monet style painting of a village at night",
+        "a monet style painting of flowers",
+        "a portrait painted in the style of monet",
+        "a starry scene painted in the style of monet",
+        "an artwork in the style of monet",
+        "an illustration in the style of monet"
+      ]
+    },
+    {
+      "category": "style",
+      "heldout_prompts": [
+        "a mural in the style of picasso",
+        "a painting in the style of picasso",
+        "a sketch in the style of picasso",
+        "a starry scene painted in the style of picasso",
+        "an illustration in the style of picasso"
+      ],
+      "metadata": {
+        "medium": "painting"
+      },
+      "name": "picasso",
+      "search_prompts": [
+        "a picasso style painting of a landscape",
+        "a picasso style painting of a village at night",
+        "a picasso style painting of flowers",
+        "a portrait painted in the style of picasso",
+        "a poster in the style of picasso",
+        "an artwork in the style of picasso",
+        "an oil painting in the style of picasso"
+      ]
+    },
+    {
+      "category": "style",
+      "heldout_prompts": [
+        "a portrait painted in the style of rembrandt",
+        "a poster in the style of rembrandt",
+        "a rembrandt style painting of a landscape",
+        "a starry scene painted in the style of rembrandt",
+        "an oil painting in the style of rembrandt"
+      ],
+      "metadata": {
+        "medium": "painting"
+      },
+      "name": "rembrandt",
+      "search_prompts": [
+        "a mural in the style of rembrandt",
+        "a painting in the style of rembrandt",
+        "a rembrandt style painting of a village at night",
+        "a rembrandt style painting of flowers",
+        "a sketch in the style of rembrandt",
+        "an artwork in the style of rembrandt",
+        "an illustration in the style of rembrandt"
+      ]
+    }
+  ],
+  "fingerprint": "11ef369458654f0c89b22c90713b60d5d5871d2d34a41c858bdbbc9124969d13",
+  "neutral_prompts": [
+    "a scenic mountain landscape at sunrise",
+    "a quiet beach with gentle waves",
+    "a city skyline at dusk",
+    "a field of wildflowers in summer",
+    "a forest path covered in autumn leaves",
+    "a snowy village in the mountains",
+    "a desert dune under a clear sky",
+    "a lighthouse on a rocky coast",
+    "a river running through a canyon",
+    "a cloudy sky over open farmland",
+    "a bowl of fresh fruit on a wooden table",
+    "a cup of coffee next to a book",
+    "an old bicycle leaning on a brick wall",
+    "a stack of books on a desk",
+    "a wooden bridge over a small stream",
+    "a hot air balloon over rolling hills",
+    "a sailboat on a calm lake",
+    "a train station with vintage architecture",
+    "a market stall with colorful awnings",
+    "a window box filled with herbs",
+    "an abstract pattern of geometric shapes",
+    "a macro photo of water droplets on a leaf",
+    "a row of colorful beach huts",
+    "a winding road through pine trees",
+    "a campfire surrounded by stones at night",
+    "a garden gnome on a lawn",
+    "a chessboard mid-game",
+    "a vintage typewriter on a desk",
+    "a flock of birds over a wetland",
+    "a stone archway covered in ivy",
+    "a greenhouse full of plants",
+    "a piano in an empty room",
+    "a hammock between two palm trees",
+    "a waterfall in a lush jungle",
+    "an ice cave with blue light",
+    "a vintage car parked on a street",
+    "a shelf of ceramic pottery",
+    "a sunrise over a misty valley",
+    "a lighthouse beam cutting through fog",
+    "a sidewalk cafe on a rainy afternoon"
+  ],
+  "seed": 137
+}

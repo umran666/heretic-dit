@@ -1,0 +1,41 @@
+# Default experiment sweep for the Heretic-DiT erasure-robustness audit.
+#
+# One JSON per run lands in results_dir; re-running skips completed runs.
+# The runner is pluggable: "module:function" mapping
+# (run_spec: dict, config: dict) -> heretic_dit.interfaces.RecoveryResult.
+# Wire it to the real pipelines via the repo-integration layer.
+
+results_dir: results
+
+base_models:
+  - sd15
+
+erasure_methods:
+  - esd
+  - uce
+  - mace
+
+# "all" uses every concept in the concepts config; or list specific names.
+concepts: all
+
+methods:
+  - name: heretic-dit
+    budget:
+      alpha: [0.5, 1.0]
+  - name: no-edit
+  - name: random-projection
+    budget:
+      alpha: [0.5, 1.0]
+      model_dim: 768
+  - name: unerased-reference
+  - name: textual-inversion
+    budget:
+      steps: [300, 1000]
+  - name: lora-finetune-recovery
+    budget:
+      steps: [50, 200, 800]
+
+seeds:
+  - 0
+
+# runner: "heretic_dit_integration.runner:execute_run"

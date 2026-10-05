@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "heretic-dit"
+version = "0.1.0"
+description = "Reproducible Subspace Abliteration and Concept Erasure for Diffusion Transformers and Non-Autoregressive Models"
+readme = "README.md"
+authors = [{ name = "Shaik Umran" }]
+license = { text = "Apache-2.0" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "torch>=2.2.0",
+    "transformers>=4.40.0",
+    "diffusers>=0.28.0",
+    "accelerate>=0.29.0",
+    "safetensors>=0.4.0",
+    "scipy>=1.12.0",
+    "numpy>=1.24.0",
+    "tqdm>=4.66.0",
+    "optuna>=3.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
