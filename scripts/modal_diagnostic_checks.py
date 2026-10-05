@@ -442,6 +442,7 @@ def run_diagnostics() -> Dict[str, Any]:
         except ValueError:
             return (float("nan"), 1.0)
 
+    real_recs = [t["real_concept_recovery"] for t in trials_data]
     rho_v1_clip, p_v1_clip = safe_spearman([t["proxy_v1_clipped"] for t in trials_data], real_recs)
     rho_v1_unclip, p_v1_unclip = safe_spearman([t["proxy_v1_unclipped"] for t in trials_data], real_recs)
     rho_win, p_win = safe_spearman([t["proxy_windowed"] for t in trials_data], real_recs)
