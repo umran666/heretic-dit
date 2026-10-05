@@ -350,7 +350,7 @@ def run_diagnostics() -> Dict[str, Any]:
         for name in cross_k_layers + cross_v_layers
     ]
     search_config = TrialConfig(projection_modes=("orthogonal",), target_projection="both", sampler="nsgaii", side="input")
-    study = create_study(config=search_config, study_name="diagnostic-study", seed=42)
+    study = create_study(config=search_config, study_name="diagnostic-study")
     objective = build_objective(
         model=erased_unet,
         predictor=erased_predictor,
