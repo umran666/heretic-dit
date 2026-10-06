@@ -211,8 +211,8 @@ class DiffusersTextualInversionBackend:
         token_id = tokenizer.convert_tokens_to_ids(placeholder)
 
         embedding_layer = text_encoder.get_input_embeddings()
-        embedding_dtype = embedding_layer.weight.dtype
         embedding_dim = embedding_layer.weight.shape[1]
+        embedding_dtype = embedding_layer.weight.dtype
         device = embedding_layer.weight.device
 
         generator = torch.Generator().manual_seed(seed)
@@ -220,25 +220,23 @@ class DiffusersTextualInversionBackend:
             device=device, dtype=embedding_dtype
         )
         embedding_layer.weight.data = torch.cat([embedding_layer.weight.data, new_row], dim=0)
-        new_index = embedding_layer.weight.shape[0] - 1
-
-        trainable = torch.nn.Parameter(embedding_layer.weight.data[new_index : new_index + 1])
-        optimizer = torch.optim.AdamW(
-            [trainable], lr=lr, weight_decay=self._weight_decay
-        )
-        embedding_layer.weight.requires_grad_(False)
-        embedding_layer.weight.data[new_index : new_index + 1] = trainable.data
+        token_id = embedding_layer.weight.shape[0] - 1
 
         images = self._few_shot_images(prompts, seed)
         if images.ndim != 4 or images.shape[0] == 0:
             raise ValueError("Few-shot images must be a non-empty (N, C, H, W) batch.")
         images = images.to(device=device, dtype=unet.dtype)
 
-        # Freeze everything except the learned row; unet stays frozen.
+        # Freeze everything except the embedding layer
         for parameter in unet.parameters():
             parameter.requires_grad_(False)
         for parameter in text_encoder.parameters():
             parameter.requires_grad_(False)
+        embedding_layer.weight.requires_grad_(True)
+
+        optimizer = torch.optim.AdamW(
+            [embedding_layer.weight], lr=lr, weight_decay=self._weight_decay
+        )
 
         if hasattr(model, "vae") and model.vae is not None and images.shape[1] == 3:
             with torch.no_grad():
@@ -275,26 +273,7 @@ class DiffusersTextualInversionBackend:
                     return_tensors="pt",
                 ).input_ids.to(device)
 
-                # Insert the trainable embedding row in place of the
-                # placeholder position without rebuilding the whole table.
-                base_embeddings = text_encoder.input_embeds_with_placeholder(
-                    input_ids, new_index, trainable.to(embedding_dtype)
-                ) if hasattr(text_encoder, "input_embeds_with_placeholder") else None
-                if base_embeddings is None:
-                    token_embeddings = embedding_layer.weight.data[input_ids].clone()
-                    mask = input_ids == token_id
-                    token_embeddings[mask] = trainable.to(embedding_dtype).reshape(-1)
-                    base_embeddings = token_embeddings
-                if hasattr(text_encoder, "text_model"):
-                    encoder_hidden_states = text_encoder.text_model(
-                        inputs_embeds=base_embeddings.to(next(text_encoder.parameters()).dtype),
-                        attention_mask=None,
-                    )[0]
-                else:
-                    encoder_hidden_states = text_encoder(
-                        inputs_embeds=base_embeddings.to(next(text_encoder.parameters()).dtype),
-                        attention_mask=None,
-                    )[0]
+                encoder_hidden_states = text_encoder(input_ids)[0]
 
                 noise = torch.randn(latents.shape, generator=generator).to(latents.device)
                 timestep = int(torch.randint(0, num_train_timesteps, (1,), generator=generator))
@@ -313,13 +292,18 @@ class DiffusersTextualInversionBackend:
                 loss = F.mse_loss(predicted.float(), target.float())
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
+
+                # Zero out gradients for all tokens except the placeholder token
+                if embedding_layer.weight.grad is not None:
+                    mask_grads_to_zero = torch.arange(embedding_layer.weight.shape[0], device=device) != token_id
+                    embedding_layer.weight.grad.data[mask_grads_to_zero] = 0.0
+
                 optimizer.step()
-                embedding_layer.weight.data[new_index : new_index + 1] = trainable.data
                 trained_steps += 1
 
         return TrainingOutcome(
             recovered_model=model,
-            trainable_params=int(trainable.numel()),
+            trainable_params=embedding_dim,
             sample_count=int(images.shape[0]),
             notes={
                 "backend": "diffusers-textual-inversion",
