@@ -201,6 +201,10 @@ class DiffusersTextualInversionBackend:
         scheduler = model.scheduler
 
         placeholder = self.placeholder_template.format(concept=concept)
+        import re
+        pattern = re.compile(re.escape(concept), re.IGNORECASE)
+        prompts = [pattern.sub(placeholder, p) if placeholder not in p else p for p in prompts]
+
         num_added = tokenizer.add_tokens([placeholder])
         if num_added != 1:
             raise RuntimeError(f"Failed to add placeholder token {placeholder!r}.")
@@ -281,10 +285,16 @@ class DiffusersTextualInversionBackend:
                     mask = input_ids == token_id
                     token_embeddings[mask] = trainable.to(embedding_dtype).reshape(-1)
                     base_embeddings = token_embeddings
-                encoder_hidden_states = text_encoder(
-                    inputs_embeds=base_embeddings.to(next(text_encoder.parameters()).dtype),
-                    attention_mask=None,
-                )[0]
+                if hasattr(text_encoder, "text_model"):
+                    encoder_hidden_states = text_encoder.text_model(
+                        inputs_embeds=base_embeddings.to(next(text_encoder.parameters()).dtype),
+                        attention_mask=None,
+                    )[0]
+                else:
+                    encoder_hidden_states = text_encoder(
+                        inputs_embeds=base_embeddings.to(next(text_encoder.parameters()).dtype),
+                        attention_mask=None,
+                    )[0]
 
                 noise = torch.randn(latents.shape, generator=generator).to(latents.device)
                 timestep = int(torch.randint(0, num_train_timesteps, (1,), generator=generator))
