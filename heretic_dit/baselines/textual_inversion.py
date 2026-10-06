@@ -156,6 +156,7 @@ class DiffusersTextualInversionBackend:
         self,
         images: Any = None,
         sample_fn: Any = None,
+        initializer_token: str | None = None,
         batch_size: int = 2,
         resolution: int = 512,
         weight_decay: float = 0.0,
@@ -164,6 +165,7 @@ class DiffusersTextualInversionBackend:
             raise ValueError("Provide exactly one of `images` or `sample_fn`.")
         self._images = images
         self._sample_fn = sample_fn
+        self._initializer_token = initializer_token
         self._batch_size = batch_size
         self._resolution = resolution
         self._weight_decay = weight_decay
@@ -216,12 +218,29 @@ class DiffusersTextualInversionBackend:
         embedding_dtype = embedding_layer.weight.dtype
         device = embedding_layer.weight.device
 
-        generator = torch.Generator().manual_seed(seed)
-        new_row = torch.randn(1, embedding_dim, generator=generator).to(
-            device=device, dtype=embedding_dtype
-        )
+        generator = torch.Generator(device=device).manual_seed(seed)
         with torch.no_grad():
-            embedding_layer.weight.data[token_id : token_id + 1].copy_(new_row)
+            if self._initializer_token is not None:
+                init_ids = tokenizer.encode(self._initializer_token, add_special_tokens=False)
+                if len(init_ids) > 0:
+                    init_id = init_ids[0]
+                    embedding_layer.weight.data[token_id : token_id + 1].copy_(
+                        embedding_layer.weight.data[init_id : init_id + 1]
+                    )
+                else:
+                    emp_std = float(embedding_layer.weight.data[:token_id].std().item())
+                    emp_mean = float(embedding_layer.weight.data[:token_id].mean().item())
+                    new_row = emp_mean + emp_std * torch.randn(
+                        1, embedding_dim, generator=generator, device=device, dtype=embedding_dtype
+                    )
+                    embedding_layer.weight.data[token_id : token_id + 1].copy_(new_row)
+            else:
+                emp_std = float(embedding_layer.weight.data[:token_id].std().item())
+                emp_mean = float(embedding_layer.weight.data[:token_id].mean().item())
+                new_row = emp_mean + emp_std * torch.randn(
+                    1, embedding_dim, generator=generator, device=device, dtype=embedding_dtype
+                )
+                embedding_layer.weight.data[token_id : token_id + 1].copy_(new_row)
 
         images = self._few_shot_images(prompts, seed)
         if images.ndim != 4 or images.shape[0] == 0:
@@ -276,8 +295,8 @@ class DiffusersTextualInversionBackend:
 
                 encoder_hidden_states = text_encoder(input_ids)[0]
 
-                noise = torch.randn(latents.shape, generator=generator).to(latents.device)
-                timestep = int(torch.randint(0, num_train_timesteps, (1,), generator=generator))
+                noise = torch.randn(latents.shape, device=device, generator=generator)
+                timestep = int(torch.randint(0, num_train_timesteps, (1,), device=device, generator=generator).item())
                 noisy = scheduler.add_noise(latents, noise, torch.tensor([timestep], device=device))
 
                 alpha_prod = alphas_cumprod[timestep]
