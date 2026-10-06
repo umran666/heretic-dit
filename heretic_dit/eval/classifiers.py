@@ -242,9 +242,19 @@ class ClipStyleScorer:
     """CLIP-based style presence scorer.
 
     Scores how strongly images match style promptings of the concept against
-    neutral photographic counter-prompts; confidence is the softmax mass of
-    the style side. Requires ``open_clip_torch``.
+    competing styles and photographic counter-prompts; confidence is the softmax
+    mass of the target concept style. Requires ``open_clip_torch``.
     """
+
+    DEFAULT_COMPETING_STYLES: Sequence[str] = (
+        "Claude Monet",
+        "Pablo Picasso",
+        "Salvador Dali",
+        "Rembrandt",
+        "an impressionist oil painting",
+        "a generic oil painting",
+        "a watercolor painting",
+    )
 
     def __init__(
         self,
@@ -259,19 +269,24 @@ class ClipStyleScorer:
             "a plain photograph",
             "a regular photo taken with a camera",
         ),
+        competing_styles: Optional[Sequence[str]] = None,
         device: Optional[str] = None,
     ) -> None:
         self._model_name = model_name
         self._pretrained = pretrained
         self._style_templates = list(style_templates)
         self._counter_templates = list(counter_templates)
+        if competing_styles is None:
+            self._competing_styles = list(self.DEFAULT_COMPETING_STYLES)
+        else:
+            self._competing_styles = list(competing_styles)
         self._device = device
         self._cache: Dict[str, Tensor] = {}
 
-    def _features_for(self, model: Any, tokenizer: Any, concept: str, templates: Sequence[str]) -> Tensor:
-        key = "|".join(templates)
+    def _features_for(self, model: Any, tokenizer: Any, texts: Sequence[str]) -> Tensor:
+        key = "||".join(texts)
         if key not in self._cache:
-            tokens = tokenizer([t.format(concept) for t in templates]).to(self._device_used)
+            tokens = tokenizer(list(texts)).to(self._device_used)
             with torch.no_grad():
                 text = model.encode_text(tokens)
             self._cache[key] = F.normalize(text, dim=-1).mean(dim=0)
@@ -294,9 +309,26 @@ class ClipStyleScorer:
         model = model.to(device)
         self._device_used = device
 
-        style = self._features_for(model, tokenizer, concept.lower(), self._style_templates)
-        counter = self._features_for(model, tokenizer, "a photograph", self._counter_templates)
-        text_features = F.normalize(torch.stack([style, counter]), dim=-1)
+        # 1. Target style features
+        target_texts = [t.format(concept.lower()) for t in self._style_templates]
+        target_feature = self._features_for(model, tokenizer, target_texts)
+
+        # 2. Competing styles features (excluding any that match the target concept)
+        all_features = [target_feature]
+        for comp in self._competing_styles:
+            if comp.lower() == concept.lower():
+                continue
+            if comp.lower().startswith(("a ", "an ")):
+                comp_texts = [comp, f"an artwork of {comp}"]
+            else:
+                comp_texts = [t.format(comp.lower()) for t in self._style_templates]
+            all_features.append(self._features_for(model, tokenizer, comp_texts))
+
+        # 3. Photographic counter-features
+        counter_feature = self._features_for(model, tokenizer, self._counter_templates)
+        all_features.append(counter_feature)
+
+        text_features = F.normalize(torch.stack(all_features), dim=-1)
 
         batch = _resize(_normalize(_as_image_batch(images), _CLIP_MEAN, _CLIP_STD), 224).to(device)
         with torch.no_grad():
