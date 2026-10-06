@@ -1,0 +1,72 @@
+{
+  "base_sd14": {
+    "method": "Base SD 1.4 (Reference)",
+    "wall_clock_sec": 0.0,
+    "trainable_params": 0,
+    "peak_vram_mb": 0.0,
+    "s_concept": 0.9207648262381554,
+    "s_neutral": 0.01595575438295782,
+    "specificity_gap": 0.9048090718551975,
+    "normalized_recovery": 1.0
+  },
+  "clean_esd": {
+    "method": "Clean ESD-x (Erased)",
+    "wall_clock_sec": 0.0,
+    "trainable_params": 0,
+    "peak_vram_mb": 0.0,
+    "s_concept": 0.058834913827013224,
+    "s_neutral": 0.012178634344309103,
+    "specificity_gap": 0.04665627948270412,
+    "normalized_recovery": 0.0
+  },
+  "heretic_dit": {
+    "method": "Heretic-DiT (Ours)",
+    "wall_clock_sec": 0.16136363499998652,
+    "trainable_params": 0,
+    "peak_vram_mb": 4341.353515625,
+    "s_concept": 0.0517340500773571,
+    "s_neutral": 0.019936685705033597,
+    "specificity_gap": 0.0317973643723235,
+    "normalized_recovery": -0.008238330805566709
+  },
+  "lora_50": {
+    "method": "LoRA (50 steps, r=4)",
+    "wall_clock_sec": 12.546192436000013,
+    "trainable_params": 397824,
+    "peak_vram_mb": 7511.98291015625,
+    "s_concept": 0.08464559426647611,
+    "s_neutral": 0.016405785470851697,
+    "specificity_gap": 0.06823980879562441,
+    "normalized_recovery": 0.02994521952169023
+  },
+  "lora_150": {
+    "method": "LoRA (150 steps, r=4)",
+    "wall_clock_sec": 36.70184114,
+    "trainable_params": 397824,
+    "peak_vram_mb": 7511.98291015625,
+    "s_concept": 0.31257671141065657,
+    "s_neutral": 0.02353715610479412,
+    "specificity_gap": 0.28903955530586245,
+    "normalized_recovery": 0.29438797044858567
+  },
+  "textual_inversion_100": {
+    "method": "Textual Inversion (100 steps)",
+    "wall_clock_sec": 24.146784241999967,
+    "trainable_params": 768,
+    "peak_vram_mb": 7983.66064453125,
+    "s_concept": 0.023076648256392218,
+    "s_neutral": 0.012178634344309103,
+    "specificity_gap": 0.010898013912083115,
+    "normalized_recovery": -0.04148627986536827
+  },
+  "textual_inversion_300": {
+    "method": "Textual Inversion (300 steps)",
+    "wall_clock_sec": 71.57614614900001,
+    "trainable_params": 768,
+    "peak_vram_mb": 7983.66064453125,
+    "s_concept": 0.022658750051050447,
+    "s_neutral": 0.012178634344309103,
+    "specificity_gap": 0.010480115706741344,
+    "normalized_recovery": -0.041971119989053916
+  }
+}
