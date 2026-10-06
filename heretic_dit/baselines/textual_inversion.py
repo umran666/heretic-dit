@@ -210,17 +210,38 @@ class DiffusersTextualInversionBackend:
             raise RuntimeError(f"Failed to add placeholder token {placeholder!r}.")
         token_id = tokenizer.convert_tokens_to_ids(placeholder)
 
-        text_encoder.resize_token_embeddings(len(tokenizer))
-        embedding_layer = text_encoder.get_input_embeddings()
-        embedding_dim = embedding_layer.weight.shape[1]
-        embedding_dtype = embedding_layer.weight.dtype
-        device = embedding_layer.weight.device
+        if hasattr(text_encoder, "text_model") and hasattr(text_encoder.text_model, "embeddings"):
+            old_embedding = text_encoder.text_model.embeddings.token_embedding
+            embedding_dim = old_embedding.weight.shape[1]
+            embedding_dtype = old_embedding.weight.dtype
+            device = old_embedding.weight.device
 
-        generator = torch.Generator().manual_seed(seed)
-        new_row = torch.randn(1, embedding_dim, generator=generator).to(
-            device=device, dtype=embedding_dtype
-        )
-        embedding_layer.weight.data[token_id : token_id + 1] = new_row
+            generator = torch.Generator().manual_seed(seed)
+            new_row = torch.randn(1, embedding_dim, generator=generator).to(
+                device=device, dtype=embedding_dtype
+            )
+
+            new_embedding = torch.nn.Embedding(
+                len(tokenizer), embedding_dim, device=device, dtype=embedding_dtype
+            )
+            with torch.no_grad():
+                new_embedding.weight[: old_embedding.weight.shape[0]].copy_(old_embedding.weight.data)
+                new_embedding.weight[token_id : token_id + 1].copy_(new_row)
+
+            text_encoder.text_model.embeddings.token_embedding = new_embedding
+            embedding_layer = new_embedding
+        else:
+            text_encoder.resize_token_embeddings(len(tokenizer))
+            embedding_layer = text_encoder.get_input_embeddings()
+            embedding_dim = embedding_layer.weight.shape[1]
+            embedding_dtype = embedding_layer.weight.dtype
+            device = embedding_layer.weight.device
+
+            generator = torch.Generator().manual_seed(seed)
+            new_row = torch.randn(1, embedding_dim, generator=generator).to(
+                device=device, dtype=embedding_dtype
+            )
+            embedding_layer.weight.data[token_id : token_id + 1] = new_row
 
         images = self._few_shot_images(prompts, seed)
         if images.ndim != 4 or images.shape[0] == 0:
