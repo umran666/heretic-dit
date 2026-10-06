@@ -210,6 +210,7 @@ class DiffusersTextualInversionBackend:
             raise RuntimeError(f"Failed to add placeholder token {placeholder!r}.")
         token_id = tokenizer.convert_tokens_to_ids(placeholder)
 
+        text_encoder.resize_token_embeddings(len(tokenizer))
         embedding_layer = text_encoder.get_input_embeddings()
         embedding_dim = embedding_layer.weight.shape[1]
         embedding_dtype = embedding_layer.weight.dtype
@@ -219,8 +220,7 @@ class DiffusersTextualInversionBackend:
         new_row = torch.randn(1, embedding_dim, generator=generator).to(
             device=device, dtype=embedding_dtype
         )
-        embedding_layer.weight.data = torch.cat([embedding_layer.weight.data, new_row], dim=0)
-        token_id = embedding_layer.weight.shape[0] - 1
+        embedding_layer.weight.data[token_id : token_id + 1] = new_row
 
         images = self._few_shot_images(prompts, seed)
         if images.ndim != 4 or images.shape[0] == 0:
