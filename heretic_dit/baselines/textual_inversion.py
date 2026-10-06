@@ -66,8 +66,10 @@ class TextualInversionRecovery:
         with CostTracker() as tracker:
             outcome = backend.train_token(erased_model, concept, prompts, steps, lr, seed)
             adapter = adapter_factory(outcome.recovered_model)
+            placeholder = outcome.notes.get("placeholder", f"<{concept}>")
+            wrapped_adapter = _PromptRewritingAdapter(adapter, concept, placeholder)
             result = validator.validate(
-                adapter,
+                wrapped_adapter,
                 concept,
                 int(budget.get("num_samples", 16)),
                 seed,
@@ -82,6 +84,29 @@ class TextualInversionRecovery:
         cost["lr"] = lr
         cost["training_images"] = int(outcome.sample_count)
         return merge_cost(result, cost)
+
+
+class _PromptRewritingAdapter:
+    """Wraps a GenerationAdapter to substitute concept occurrences with placeholder token."""
+
+    def __init__(self, inner: Any, concept: str, placeholder: str) -> None:
+        self._inner = inner
+        self._concept = concept
+        self._placeholder = placeholder
+        self.model_id = f"{getattr(inner, 'model_id', 'unknown')}+ti({placeholder})"
+
+    def generate(
+        self,
+        prompt: str,
+        seed: int,
+        num_inference_steps: int = 50,
+        guidance_scale: float = 7.5,
+    ) -> torch.Tensor:
+        import re
+
+        pattern = re.compile(re.escape(self._concept), re.IGNORECASE)
+        rewritten = pattern.sub(self._placeholder, prompt)
+        return self._inner.generate(rewritten, seed, num_inference_steps, guidance_scale)
 
 
 class DummyTextualInversionBackend:
@@ -106,7 +131,7 @@ class DummyTextualInversionBackend:
             trainable_params=768,
             sample_count=len(prompts),
             peak_vram_mb=0.0,
-            notes={"backend": "dummy", "steps": steps},
+            notes={"backend": "dummy", "steps": steps, "placeholder": f"<{concept}>"},
         )
 
 
@@ -211,9 +236,25 @@ class DiffusersTextualInversionBackend:
         for parameter in text_encoder.parameters():
             parameter.requires_grad_(False)
 
+        if hasattr(model, "vae") and model.vae is not None and images.shape[1] == 3:
+            with torch.no_grad():
+                latents_batch = (
+                    model.vae.encode(images.to(device=device, dtype=model.vae.dtype)).latent_dist.sample()
+                    * 0.18215
+                ).to(device=device, dtype=torch.float32)
+        elif images.shape[1] == 4:
+            latents_batch = images.to(device=device, dtype=torch.float32)
+        else:
+            latents_batch = F.interpolate(
+                images.to(device=device, dtype=torch.float32),
+                size=(self._resolution // 8, self._resolution // 8),
+                mode="bilinear",
+                align_corners=False,
+            ).to(torch.float32)
+
         num_train_timesteps = int(getattr(scheduler.config, "num_train_timesteps", 1000))
         prompts_cycle = [prompts[i % len(prompts)] for i in range(steps)]
-        image_cycle = [images[i % images.shape[0]] for i in range(steps)]
+        latents_cycle = [latents_batch[i % latents_batch.shape[0]].unsqueeze(0) for i in range(steps)]
         alphas_cumprod = scheduler.alphas_cumprod.to(device=device, dtype=torch.float32)
 
         unet.eval()
@@ -222,7 +263,7 @@ class DiffusersTextualInversionBackend:
         with torch.enable_grad():
             for step_index in range(steps):
                 prompt = prompts_cycle[step_index]
-                image = image_cycle[step_index]
+                latents = latents_cycle[step_index]
                 input_ids = tokenizer(
                     [prompt],
                     padding="max_length",
@@ -245,10 +286,6 @@ class DiffusersTextualInversionBackend:
                     attention_mask=None,
                 )[0]
 
-                latents = F.interpolate(
-                    image.unsqueeze(0), size=(self._resolution // 8, self._resolution // 8),
-                    mode="bilinear", align_corners=False,
-                ).to(torch.float32)
                 noise = torch.randn(latents.shape, generator=generator).to(latents.device)
                 timestep = int(torch.randint(0, num_train_timesteps, (1,), generator=generator))
                 noisy = scheduler.add_noise(latents, noise, torch.tensor([timestep], device=device))

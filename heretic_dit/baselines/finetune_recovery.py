@@ -180,12 +180,21 @@ class _DiffusersFinetuneMixin:
         unet.train()
         optimizer = torch.optim.AdamW(trainable_params, lr=lr, weight_decay=self._weight_decay)
 
-        latents_batch = F.interpolate(
-            images.to(device=device, dtype=torch.float32),
-            size=(images.shape[-2] // 8, images.shape[-1] // 8),
-            mode="bilinear",
-            align_corners=False,
-        )
+        if hasattr(model, "vae") and model.vae is not None and images.shape[1] == 3:
+            with torch.no_grad():
+                latents_batch = (
+                    model.vae.encode(images.to(device=device, dtype=model.vae.dtype)).latent_dist.sample()
+                    * 0.18215
+                ).to(device=device, dtype=torch.float32)
+        elif images.shape[1] == 4:
+            latents_batch = images.to(device=device, dtype=torch.float32)
+        else:
+            latents_batch = F.interpolate(
+                images.to(device=device, dtype=torch.float32),
+                size=(images.shape[-2] // 8, images.shape[-1] // 8),
+                mode="bilinear",
+                align_corners=False,
+            )
         alphas_cumprod = scheduler.alphas_cumprod.to(device=device, dtype=torch.float32)
         text_cache: Dict[str, torch.Tensor] = {}
         trained_steps = 0
