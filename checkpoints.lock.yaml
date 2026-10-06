@@ -1,0 +1,38 @@
+version: 1
+entries:
+- method: esd-official
+  base_model: sd14
+  concept: van-gogh
+  source: https://erasing.baulab.info/weights/esd_models/art/diffusers-VanGogh-ESDx1-UNET.pt
+  origin: released
+  files:
+    official_esd_sd14_van_gogh.pt: 8881d70b1bd376c5532e933f60c5a78fc76eb63e153edfbfaaf6d649106b167e
+  revision: null
+  commit: null
+  seed: null
+  command: null
+  notes: Official ICCV 2023 released ESD style-erasure checkpoint for Van Gogh.
+- method: esd
+  base_model: sd14
+  concept: van-gogh
+  source: modal:heretic-models/clean_esd_x_sd14_van_gogh.safetensors
+  origin: trained
+  files:
+    clean_esd_x_sd14_van_gogh.safetensors: b62a7a3f9897887ac19cceccac66946664d469bace3d5437b3fe43881463ca2f
+  revision: null
+  commit: null
+  seed: 42
+  command: null
+  notes: Clean ESD-x control (300 steps, lr=5e-5, Delta W non-cross-attn == 0.0).
+- method: uce
+  base_model: sd14
+  concept: van-gogh
+  source: modal:heretic-models/uce_sd14_van_gogh.safetensors
+  origin: trained
+  files:
+    uce_sd14_van_gogh.safetensors: e743a054a8fa717644b16fb3fdaacbd7841aeb8b74c795aa9c7054d27787794d
+  revision: null
+  commit: null
+  seed: 42
+  command: null
+  notes: Unified Concept Editing (UCE WACV 2024) closed-form projection on SD 1.4.
